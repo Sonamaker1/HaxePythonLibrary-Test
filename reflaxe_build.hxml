@@ -1,0 +1,5 @@
+-cp src
+-main hxpy.Entry
+
+-lib reflaxe.cpp
+-D cpp-output=gen/cpp
