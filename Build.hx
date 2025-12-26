@@ -80,7 +80,7 @@ class Build {
     Sys.println("  A) CMake GUI:");
     Sys.println("     - Configure source dir = this folder");
     Sys.println("     - Configure build dir  = build/");
-    Sys.println('     - Set Python_ROOT_DIR and pybind11_DIR if needed');
+    Sys.println('     - Set Python_ROOT_DIR and pybind11_DIR if needed (run `python -m pybind11 --cmakedir`)');
     Sys.println("     - Configure + Generate");
     Sys.println("");
     Sys.println("  B) CLI:");
