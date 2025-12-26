@@ -1,5 +1,6 @@
 package hxpy;
 
+@:pyDict
 @:valueType
 class KV {
   public var key:String;

@@ -1,0 +1,4 @@
+-cp src
+-main tools.GenBindingsFromSchema
+--interp
+--macro tools.PySchema.emit("gen/py_schema.json","hxpy")

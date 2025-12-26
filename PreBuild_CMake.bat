@@ -1,2 +1,3 @@
+haxe reflaxe_build.hxml
 haxe -main Build.hx --interp
-haxe -cp src -main tools.GenBindings --interp
+haxe gen_bindings.hxml

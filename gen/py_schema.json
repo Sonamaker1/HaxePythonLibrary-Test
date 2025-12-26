@@ -1,0 +1,84 @@
+{
+  "classes": [
+    {
+      "name": "hxpy.ComplexData",
+      "fields": [
+        {
+          "pyName": "counts",
+          "name": "counts",
+          "type": {
+            "kind": "array",
+            "elem": {
+              "name": "hxpy.KV",
+              "kind": "object",
+              "cppName": "hxpy::KV"
+            }
+          }
+        },
+        {
+          "pyName": "values",
+          "name": "values",
+          "type": {
+            "kind": "array",
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "pyName": "people",
+          "name": "people",
+          "type": {
+            "kind": "array",
+            "elem": {
+              "name": "hxpy.Person",
+              "kind": "object",
+              "cppName": "hxpy::Person"
+            }
+          }
+        }
+      ],
+      "cppName": "hxpy::ComplexData"
+    },
+    {
+      "name": "hxpy.KV",
+      "fields": [
+        {
+          "pyName": "key",
+          "name": "key",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "pyName": "value",
+          "name": "value",
+          "type": {
+            "kind": "int"
+          }
+        }
+      ],
+      "cppName": "hxpy::KV"
+    },
+    {
+      "name": "hxpy.Person",
+      "fields": [
+        {
+          "pyName": "name",
+          "name": "name",
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "pyName": "age",
+          "name": "age",
+          "type": {
+            "kind": "int"
+          }
+        }
+      ],
+      "cppName": "hxpy::Person"
+    }
+  ]
+}

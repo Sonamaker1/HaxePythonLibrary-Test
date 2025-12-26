@@ -1,10 +1,12 @@
 package hxpy;
 
 class Api {
+  @:pyExport("add")
   public static function add(a:Int, b:Int):Int {
     return a + b;
   }
 
+  @:pyExport("build_complex")
   public static function buildComplex():ComplexData {
     var d = new ComplexData();
 

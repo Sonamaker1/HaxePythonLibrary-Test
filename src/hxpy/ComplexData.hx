@@ -1,5 +1,6 @@
 package hxpy;
 
+@:pyDict
 @:valueType
 class ComplexData {
   // "map<string,int>" represented as Array<KV>
