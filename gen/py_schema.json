@@ -111,7 +111,7 @@
       "ret": {
         "kind": "array",
         "elem": {
-          "kind": "string"
+          "kind": "float"
         }
       },
       "cppOwner": "hxpy::Api",
@@ -121,6 +121,35 @@
           "name": "hexIn",
           "type": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "hxName": "rgbToHex",
+      "pyName": "rgbToHex",
+      "ret": {
+        "kind": "int"
+      },
+      "cppOwner": "hxpy::Api",
+      "owner": "hxpy.Api",
+      "args": [
+        {
+          "name": "red",
+          "type": {
+            "kind": "float"
+          }
+        },
+        {
+          "name": "green",
+          "type": {
+            "kind": "float"
+          }
+        },
+        {
+          "name": "blue",
+          "type": {
+            "kind": "float"
           }
         }
       ]

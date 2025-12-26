@@ -73,8 +73,9 @@ PYBIND11_MODULE(hxpy_ext, m) {
   m.def("hexToRGB", [](int hexIn){ auto r = hxpy::Api::hexToRGB(hexIn);
     py::list lst;
     for (const auto& e : _hx_deref(r)) {
-      lst.append(py::str(e));
+      lst.append(e);
     }
     return lst; }, py::arg("hexIn"));
+  m.def("rgbToHex", &hxpy::Api::rgbToHex, py::arg("red"), py::arg("green"), py::arg("blue"));
   m.def("build_complex", [](){ auto r = hxpy::Api::buildComplex(); return to_python_hxpy_ComplexData(r); });
 }

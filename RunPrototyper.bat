@@ -1,0 +1,1 @@
+haxe -cp src -main Prototyper --interp
