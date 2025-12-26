@@ -67,8 +67,14 @@ static py::object to_python_hxpy_Person(const hxpy::Person& v) {
 }
 
 PYBIND11_MODULE(hxpy_ext, m) {
-  m.doc() = "Auto-generated bindings from Haxe @:pyDict schema";
+  m.doc() = "Auto-generated bindings from Haxe schema (@:pyDict + @:pyExport)";
 
   m.def("add", &hxpy::Api::add, py::arg("a"), py::arg("b"));
-  m.def("build_complex", [](){ auto d = hxpy::Api::buildComplex(); return to_python_hxpy_ComplexData(d); });
+  m.def("hexToRGB", [](int hexIn){ auto r = hxpy::Api::hexToRGB(hexIn);
+    py::list lst;
+    for (const auto& e : _hx_deref(r)) {
+      lst.append(py::str(e));
+    }
+    return lst; }, py::arg("hexIn"));
+  m.def("build_complex", [](){ auto r = hxpy::Api::buildComplex(); return to_python_hxpy_ComplexData(r); });
 }

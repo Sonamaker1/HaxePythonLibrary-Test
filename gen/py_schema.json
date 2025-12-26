@@ -80,5 +80,62 @@
       ],
       "cppName": "hxpy::Person"
     }
+  ],
+  "exports": [
+    {
+      "hxName": "add",
+      "pyName": "add",
+      "ret": {
+        "kind": "int"
+      },
+      "cppOwner": "hxpy::Api",
+      "owner": "hxpy.Api",
+      "args": [
+        {
+          "name": "a",
+          "type": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "b",
+          "type": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "hxName": "hexToRGB",
+      "pyName": "hexToRGB",
+      "ret": {
+        "kind": "array",
+        "elem": {
+          "kind": "string"
+        }
+      },
+      "cppOwner": "hxpy::Api",
+      "owner": "hxpy.Api",
+      "args": [
+        {
+          "name": "hexIn",
+          "type": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "hxName": "buildComplex",
+      "pyName": "build_complex",
+      "ret": {
+        "name": "hxpy.ComplexData",
+        "kind": "object",
+        "cppName": "hxpy::ComplexData"
+      },
+      "cppOwner": "hxpy::Api",
+      "owner": "hxpy.Api",
+      "args": []
+    }
   ]
 }

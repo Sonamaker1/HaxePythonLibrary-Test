@@ -61,16 +61,24 @@ class GenBindingsFromSchema {
       cpp.add("\n");
     }
 
-    // Emit module exports (still hardcoded; can be schema-driven later)
+    // Emit module exports (schema-driven)
     cpp.add('PYBIND11_MODULE(' + moduleName + ', m) {\n');
-    cpp.add('  m.doc() = "Auto-generated bindings from Haxe @:pyDict schema";\n\n');
-    cpp.add('  m.def("add", &hxpy::Api::add, py::arg("a"), py::arg("b"));\n');
-    cpp.add('  m.def("build_complex", [](){ auto d = hxpy::Api::buildComplex(); return to_python_hxpy_ComplexData(d); });\n');
+    cpp.add('  m.doc() = "Auto-generated bindings from Haxe schema (@:pyDict + @:pyExport)";\n\n');
+
+    final exports:Array<Dynamic> = (schema.exports != null) ? cast schema.exports : [];
+    for (e in exports) {
+      cpp.add(genModuleExport(e));
+    }
+
     cpp.add("}\n");
 
     File.saveContent(outPath, cpp.toString());
     Sys.println("Wrote " + outPath);
   }
+
+  // ----------------------------
+  // Type -> dict converters
+  // ----------------------------
 
   static function genToPython(cls:Dynamic):String {
     final haxeName:String = cls.name;     // hxpy.ComplexData
@@ -95,17 +103,14 @@ class GenBindingsFromSchema {
       case "int" | "float" | "bool":
         '  d["' + pyName + '"] = v.' + fieldName + ';\n';
 
-      // IMPORTANT FIX:
-      // Never call to_python_String(...) — just wrap with py::str(...)
-      case "string"|"String":
+      case "string" | "String":
         '  d["' + pyName + '"] = py::str(v.' + fieldName + ');\n';
 
       case "object":
-        if(t.name == "String" || t.name == "string"){ 
-          // Special case: reflaxe String type
-          return '  d["' + pyName + '"] = py::str(v.' + fieldName + ');\n';
-        }
-        else{
+        // Defensive: schema might still encode String as object
+        if (t.name == "String" || t.name == "string") {
+          '  d["' + pyName + '"] = py::str(v.' + fieldName + ');\n';
+        } else {
           final fn = "to_python_" + (t.name : String).split(".").join("_");
           '  d["' + pyName + '"] = ' + fn + '(v.' + fieldName + ');\n';
         }
@@ -132,15 +137,136 @@ class GenBindingsFromSchema {
       case "int" | "float" | "bool":
         varName;
 
-      case "string":
+      case "string" | "String":
         "py::str(" + varName + ")";
 
       case "object":
-        final fn = "to_python_" + (t.name : String).split(".").join("_");
-        fn + "(" + varName + ")";
+        if (t.name == "String" || t.name == "string") {
+          "py::str(" + varName + ")";
+        } else {
+          final fn = "to_python_" + (t.name : String).split(".").join("_");
+          fn + "(" + varName + ")";
+        }
 
       default:
         varName;
+    }
+  }
+
+  // ----------------------------
+  // Exports generation
+  // ----------------------------
+
+  static function genModuleExport(exp:Dynamic):String {
+    // Expected schema format:
+    // {
+    //   pyName: "hexToRGB",
+    //   hxName: "hexToRGB",
+    //   cppOwner: "hxpy::Api",
+    //   args: [{ name:"hexIn", type:{kind:"int"} }],
+    //   ret: { kind:"array", elem:{kind:"string"} }
+    // }
+    final pyName:String = exp.pyName;
+    final hxName:String = exp.hxName;
+    final cppOwner:String = exp.cppOwner;
+
+    final args:Array<Dynamic> = (exp.args != null) ? cast exp.args : [];
+    final ret:Dynamic = exp.ret;
+
+    final params = new Array<String>();
+    final callArgs = new Array<String>();
+    final pyArgs = new Array<String>();
+
+    for (a in args) {
+      final an:String = a.name;
+      final cppT = schemaTypeToCppParamType(a.type);
+      params.push(cppT + " " + an);
+      callArgs.push(an);
+      pyArgs.push('py::arg("' + an + '")');
+    }
+
+    final paramList = params.join(", ");
+    final callList = callArgs.join(", ");
+    final pyArgList = (pyArgs.length > 0) ? (", " + pyArgs.join(", ")) : "";
+
+    final callExpr = cppOwner + "::" + hxName + "(" + callList + ")";
+
+    // If return is a simple primitive/bool, bind directly as a function pointer.
+    if (isDirectReturn(ret)) {
+      return '  m.def("' + pyName + '", &' + cppOwner + "::" + hxName + pyArgList + ');\n';
+    }
+
+    // Otherwise wrap in a lambda that converts the return value.
+    final body = genReturnWrapperBody(ret, callExpr);
+    return '  m.def("' + pyName + '", [](' + paramList + '){ ' + body + ' }' + pyArgList + ');\n';
+  }
+
+  static function isDirectReturn(ret:Dynamic):Bool {
+    if (ret == null || ret.kind == null) return false;
+    return switch (ret.kind) {
+      case "int" | "float" | "bool":
+        true;
+      default:
+        false;
+    }
+  }
+
+  static function genReturnWrapperBody(ret:Dynamic, callExpr:String):String {
+    if (ret == null || ret.kind == null) {
+      return '(void)' + callExpr + '; return py::none();';
+    }
+
+    return switch (ret.kind) {
+      case "int" | "float" | "bool":
+        // Should have been direct, but keep safe
+        "return " + callExpr + ";";
+
+      case "string" | "String":
+        'auto r = ' + callExpr + '; return py::str(r);';
+
+      case "object":
+        if (ret.name == "String" || ret.name == "string") {
+          'auto r = ' + callExpr + '; return py::str(r);';
+        } else {
+          final fn = "to_python_" + (ret.name : String).split(".").join("_");
+          'auto r = ' + callExpr + '; return ' + fn + '(r);';
+        }
+
+      case "array":
+        final elemExpr = genElemExpr(ret.elem, "e");
+        var s = "";
+        s += 'auto r = ' + callExpr + ';\n';
+        s += '    py::list lst;\n';
+        s += '    for (const auto& e : _hx_deref(r)) {\n';
+        s += '      lst.append(' + elemExpr + ');\n';
+        s += '    }\n';
+        s += '    return lst;';
+        s;
+
+      default:
+        '(void)' + callExpr + '; return py::none();';
+    }
+  }
+
+  static function schemaTypeToCppParamType(t:Dynamic):String {
+    // This controls how we accept args from Python into the lambda wrapper.
+    // Keep it conservative; you can extend later.
+    if (t == null || t.kind == null) return "py::object";
+
+    return switch (t.kind) {
+      case "int":
+        "int";
+      case "float":
+        "double";
+      case "bool":
+        "bool";
+      case "string" | "String":
+        "const std::string&";
+
+      // For now we don't auto-convert complex args from Python -> Haxe.
+      // You can add from_python_* later.
+      default:
+        "py::object";
     }
   }
 }

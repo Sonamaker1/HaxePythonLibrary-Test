@@ -11,6 +11,7 @@ class PyExports {
   // Static functions to expose from hxpy.Api (name -> exported python name)
   public static final API_FUNCS:Array<{ hx:String, py:String }> = [
     { hx: "add", py: "add" },
+    { hx: "hexToRGB", py: "hexToRGB" },
     { hx: "buildComplex", py: "build_complex" },
   ];
 }

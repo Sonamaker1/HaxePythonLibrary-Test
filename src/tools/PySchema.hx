@@ -19,7 +19,8 @@ class PySchema {
     #if macro
     final moduleNames = collectModuleNames(rootPkg);
 
-    final schema:Dynamic = { classes: [] };
+    // IMPORTANT: initialize exports too so it always exists
+    final schema:Dynamic = { classes: [], exports: [] };
 
     for (m in moduleNames) {
       final types = Context.getModule(m); // Array<Type>
@@ -28,29 +29,64 @@ class PySchema {
           case TInst(c, _):
             final cls = c.get();
             if (cls.isExtern) continue;
-            if (!hasMeta(cls.meta.get(), ":pyDict")) continue;
 
             final fullName = (cls.pack.length == 0) ? cls.name : (cls.pack.join(".") + "." + cls.name);
+            final cppOwner = fullName.split(".").join("::");
 
-            final fields:Array<Dynamic> = [];
-            for (f in cls.fields.get()) {
-              if (!f.isPublic) continue;
-              if (!f.kind.match(FVar(_, _))) continue;
-              if (hasMeta(f.meta.get(), ":pyIgnore")) continue;
+            // ---- 1) Capture @:pyExport on static methods for ALL classes ----
+            for (sf in cls.statics.get()) {
+              if (!sf.isPublic) continue;
 
-              final pyName = getMetaString(f.meta.get(), ":pyName", f.name);
-              fields.push({
-                name: f.name,
-                pyName: pyName,
-                type: typeToSchema(Context.follow(f.type))
-              });
+              // NOTE: your metadata is @:pyExport("name"), so we fetch the string
+              final pyExportName = getMetaString(sf.meta.get(), ":pyExport", null);
+              if (pyExportName == null) continue;
+
+              switch (Context.follow(sf.type)) {
+                case TFun(args, ret):
+                  final argSchema:Array<Dynamic> = [];
+                  for (a in args) {
+                    argSchema.push({
+                      name: a.name,
+                      type: typeToSchema(Context.follow(a.t))
+                    });
+                  }
+
+                  (schema.exports : Array<Dynamic>).push({
+                    pyName: pyExportName,
+                    hxName: sf.name,
+                    owner: fullName,     // "hxpy.Api"
+                    cppOwner: cppOwner,  // "hxpy::Api"
+                    args: argSchema,
+                    ret: typeToSchema(Context.follow(ret))
+                  });
+
+                default:
+                  // not a function, ignore
+              }
             }
 
-            (schema.classes : Array<Dynamic>).push({
-              name: fullName,
-              cppName: fullName.split(".").join("::"),
-              fields: fields
-            });
+            // ---- 2) Capture @:pyDict instance fields ONLY for @:pyDict classes ----
+            if (hasMeta(cls.meta.get(), ":pyDict")) {
+              final fields:Array<Dynamic> = [];
+              for (f in cls.fields.get()) {
+                if (!f.isPublic) continue;
+                if (!f.kind.match(FVar(_, _))) continue;
+                if (hasMeta(f.meta.get(), ":pyIgnore")) continue;
+
+                final pyName = getMetaString(f.meta.get(), ":pyName", f.name);
+                fields.push({
+                  name: f.name,
+                  pyName: pyName,
+                  type: typeToSchema(Context.follow(f.type))
+                });
+              }
+
+              (schema.classes : Array<Dynamic>).push({
+                name: fullName,
+                cppName: cppOwner,
+                fields: fields
+              });
+            }
 
           default:
         }
@@ -100,7 +136,6 @@ class PySchema {
         collectRec(p, pkg + "." + name, out);
       } else if (StringTools.endsWith(name, ".hx")) {
         final base = name.substr(0, name.length - 3);
-        if (base == "package" || base == "import") continue;
         if (StringTools.startsWith(base, "_")) continue;
         out.push(pkg + "." + base);
       }
@@ -112,7 +147,7 @@ class PySchema {
     return false;
   }
 
-  static function getMetaString(meta:Array<haxe.macro.Expr.MetadataEntry>, name:String, fallback:String):String {
+  static function getMetaString(meta:Array<haxe.macro.Expr.MetadataEntry>, name:String, fallback:Null<String>):Null<String> {
     for (m in meta) {
       if (m.name == name && m.params != null && m.params.length == 1) {
         switch (m.params[0].expr) {
@@ -140,14 +175,14 @@ class PySchema {
         final full = (cls.pack.length == 0) ? name : (cls.pack.join(".") + "." + name);
 
         // Normalize String regardless of how it shows up
-        if (full == "String" || full == "std.String" || name == "String") {
-            return { kind: "string" };
+        if (full == "String" || name == "String") {
+          return { kind: "string" };
         }
 
         if (name == "Array" && params.length == 1) {
-          { kind: "array", elem: typeToSchema(Context.follow(params[0])) };
+          return { kind: "array", elem: typeToSchema(Context.follow(params[0])) };
         } else {
-          { kind: "object", name: full, cppName: full.split(".").join("::") };
+          return { kind: "object", name: full, cppName: full.split(".").join("::") };
         }
 
       default:
