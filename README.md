@@ -4,7 +4,9 @@ This is a work in progress! Currently tailored to work on windows 10
 This branch will be updated periodically as more discoveries and tests happen.
 
 Requires Haxe 4.0+ and nightly version of the Reflaxe-cpp haxelib
+
 Install Reflaxe with this:
+
 `haxelib git reflaxe.cpp https://github.com/SomeRanDev/reflaxe.CPP nightly`
 
 Currently you must:
